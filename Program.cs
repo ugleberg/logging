@@ -2,7 +2,7 @@
 using Console = Logging.Console;
 
 
-Console.Write( "Logging demo starting" );
+Console.Write( "Starting logging demo" );
 
 var obj = new { Var1 = "Var1", Var2 = "Var2" };
 Console.Write( obj  );
