@@ -20,7 +20,9 @@ Thread.Sleep( 555 );
 
 try
 {
-    Console.Input( "Enter a divisor value: ", out int divisor );
+    Console.ReadPassword( "Enter your password: ", out var password );
+    Console.Write( $"You entered: { password }" );
+    Console.Read( "Enter a divisor value: ", out int divisor );
     var unused = 7 / divisor;
 }
 catch( Exception e )
