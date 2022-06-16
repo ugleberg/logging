@@ -139,10 +139,6 @@ public class Log
 
     public void Write()
     {
-        var year = _time.Year;
-        var month = _time.Month;
-        var index = $"{Prefix}-{year}-{month}";
-
         var doc = new
         {
             Time = _time,
@@ -155,7 +151,7 @@ public class Log
             User = System.Environment.UserName
         };
         
-        var response = LowLevelClient.Index< BytesResponse >( index, Id, PostData.Serializable( doc ) );
+        var response = LowLevelClient.Index< BytesResponse >( $"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable( doc ) );
 
         if( response.Success )
         {

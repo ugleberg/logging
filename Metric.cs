@@ -190,9 +190,6 @@ public sealed class Metric
 
     public void Write()
     {
-        var year = _start.Year;
-        var month = _start.Month;
-        var index = $"{Prefix}-{year}-{month}";
         var stop = DateTime.Now;
         Elapsed = ( stop - _start ).Milliseconds;
         var doc = new
@@ -212,7 +209,7 @@ public sealed class Metric
             User = System.Environment.UserName
         };
   
-        var response = LowLevelClient.Index< BytesResponse >( index, Id, PostData.Serializable( doc ) );
+        var response = LowLevelClient.Index< BytesResponse >( $"{Prefix}-{_start:yyyy-MM}", Id, PostData.Serializable( doc ) );
 
         if( response.Success )
         {
