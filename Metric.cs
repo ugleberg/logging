@@ -73,6 +73,24 @@ public sealed class Metric
     #endregion
 
  
+    #region Retry
+
+    private int _retry;
+
+    public Metric Retry( int value )
+    {
+        _retry = value;
+        return this;
+    }
+
+    public int Retry()
+    {
+        return _retry;
+    }
+
+    #endregion
+
+
     #region Count
 
     private int _count;
@@ -198,6 +216,7 @@ public sealed class Metric
             Start = _start,
             Stop = stop,
             Elapsed,
+            Retry = _retry,
             Count = _count,
             Result = _result,
             Initiator = _initiator,
