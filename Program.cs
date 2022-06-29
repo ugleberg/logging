@@ -1,12 +1,6 @@
 ﻿using Logging;
 using Console = Logging.Console;
 
-/*  Use these settings to disable security:
- 
-    xpack.security.enabled: false
-    xpack.security.autoconfiguration.enabled: false
- */
-
 
 Console.Write( "Starting logging demo" );
 
