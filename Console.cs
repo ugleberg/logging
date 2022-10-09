@@ -35,29 +35,29 @@ public static class Console
 
     public static void ReadPassword( string message, out string value )
     {
-        System.Console.Write( message );
         value = "";
-        var info = System.Console.ReadKey( true );
-        while( info.Key != ConsoleKey.Enter )
+        System.Console.Write(message);
+        var info = System.Console.ReadKey(true);
+        while (info.Key != ConsoleKey.Enter)
         {
-            if( info.Key != ConsoleKey.Backspace )
+            if (info.Key != ConsoleKey.Backspace)
             {
-                System.Console.Write( "*" );
+                System.Console.Write("*");
                 value += info.KeyChar;
             }
-            else if( info.Key == ConsoleKey.Backspace )
+            else if (info.Key == ConsoleKey.Backspace)
             {
-                if( !string.IsNullOrEmpty( value ) )
+                if (!string.IsNullOrEmpty(value))
                 {
-                    value = value[ ..^1 ];
+                    value = value[..^1];
                     var pos = System.Console.CursorLeft;
-                    System.Console.SetCursorPosition( pos - 1, System.Console.CursorTop );
-                    System.Console.Write( " " );
-                    System.Console.SetCursorPosition( pos - 1, System.Console.CursorTop );
+                    System.Console.SetCursorPosition(pos - 1, System.Console.CursorTop);
+                    System.Console.Write(" ");
+                    System.Console.SetCursorPosition(pos - 1, System.Console.CursorTop);
                 }
             }
 
-            info = System.Console.ReadKey( true );
+            info = System.Console.ReadKey(true);
         }
 
         // add a new line because user pressed enter at the end of their password
