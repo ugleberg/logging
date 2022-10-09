@@ -9,8 +9,8 @@
 
     <ItemGroup>
       <PackageReference Include="Elasticsearch.Net" Version="7.17.4" />
-      <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0-preview.5.22301.12" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0-preview.5.22301.12" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0-rc.1.22426.10" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0-rc.1.22426.10" />
     </ItemGroup>
 
     <ItemGroup>
