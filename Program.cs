@@ -2,37 +2,10 @@
 using Console = Logging.Console;
 
 
-Console.Write( "Starting logging demo" );
+var metric = new Metric( "Main" ).Initiator( "Console" );
+Console.Write( $"Starting logging demo, execution id = {metric.Id}" );
 
-var obj = new { Var1 = "Var1", Var2 = "Var2" };
-Console.Write( obj  );
-
-new Log( "Just a simple info log entry" ).
-    Level( Level.Information ).
-    Event( Guid.NewGuid().ToString() ).
-    Data( obj ).
-    Write();
-
-var metric = new Metric( "Main" ).
-    Initiator( "Console" );
-
-Thread.Sleep( 555 );
-
-try
-{
-    Console.ReadPassword( "Enter your password: ", out var password );
-    Console.Write( $"You entered: { password }" );
-    Console.Read( "Enter a divisor value: ", out int divisor );
-    var unused = 7 / divisor;
-}
-catch( Exception e )
-{
-    new Log( e ).
-        Write();
-
-    metric.Result( "Error" );
-}
+new Log( "Running logging demo" ).Scope( metric.Id ).Data( metric ).Write();
 
 metric.Write();
-
 Console.Write( $"Logging demo finished, elapsed {metric.Elapsed} msecs" );

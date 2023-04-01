@@ -16,7 +16,7 @@ public enum Level
 public class Log
 {
     // Low-level client used to write to Elastic.
-    private static readonly ElasticLowLevelClient LowLevelClient;
+    private static readonly ElasticLowLevelClient? LowLevelClient;
     
     // Registers the configured environment name, and stamps each metrics with it.
     private static readonly string Environment;
@@ -25,26 +25,30 @@ public class Log
     private static readonly string Machine;
     
     // TODO: Add comment...
-    private static readonly string Prefix;
+    private static readonly string? Prefix;
 
     private static readonly bool Console;
 
     
     static Log()
     {
-        var serverUri = AppSettings.GetString( "Logs:ServerUri" );
-        var fingerprint = AppSettings.GetString( "Logs:Fingerprint" );
-        var username = AppSettings.GetString( "Logs:Username" );
-        var password = AppSettings.GetString( "Logs:Password" );
-        Prefix = AppSettings.GetString( "Logs:Prefix" );
-        Console = AppSettings.GetBool( "Metrics:Console" );
+        if (Config.Exists())
+        {
+            var serverUri = Config.GetString("Logs:ServerUri");
+            var fingerprint = Config.GetString("Logs:Fingerprint");
+            var username = Config.GetString("Logs:Username");
+            var password = Config.GetString("Logs:Password");
+            Prefix = Config.GetString("Logs:Prefix");
+            Console = Config.GetBool("Metrics:Console");
 
-        var connectionConfiguration =
-            new ConnectionConfiguration( new Uri( serverUri ) )
-                .BasicAuthentication( username, password )
-                .CertificateFingerprint( fingerprint );   
-        
-        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
+            var connectionConfiguration =
+                new ConnectionConfiguration(new Uri(serverUri))
+                    .BasicAuthentication(username, password)
+                    .CertificateFingerprint(fingerprint);
+
+            LowLevelClient = new ElasticLowLevelClient(connectionConfiguration);
+        }
+
         Environment = System.Environment.GetEnvironmentVariable( "ASPNETCORE_ENVIRONMENT" ) ?? "local";
         Machine = System.Environment.MachineName;
     }
@@ -107,19 +111,19 @@ public class Log
     #endregion
     
 
-    #region Event
+    #region Scope
 
-    private string? _event;
+    private string? _scope;
 
-    public Log Event( string value )
+    public Log Scope( string value )
     {
-        _event = value;
+        _scope = value;
         return this;
     }
 
-    public string? Event()
+    public string? Scope()
     {
-        return _event;
+        return _scope;
     }
 
     #endregion
@@ -144,23 +148,21 @@ public class Log
             Time = _time,
             Message,
             Level = _level.ToString(),
-            Event = _event,
+            Event = _scope,
             Data = _data,
             Environment,
             Machine,
             User = System.Environment.UserName
         };
         
-        var response = LowLevelClient.Index< BytesResponse >( $"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable( doc ) );
+        if( Console || LowLevelClient == null)
+            Logging.Console.Write(doc);
 
-        if( response.Success )
-        {
-            if( Console )
-                Logging.Console.Write( doc );
-
-            return;
-        }
+        if (LowLevelClient == null) return;
         
-        Logging.Console.Write( $"Error: unable to write log: { doc }" );
+        var response = LowLevelClient.Index<BytesResponse>($"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable(doc));
+
+        if (!response.Success)
+            Logging.Console.Write($"Error: unable to write log: {doc}");
     }
 }

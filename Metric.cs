@@ -7,7 +7,7 @@ namespace Logging;
 public sealed class Metric
 {
     // Low-level client used to write to Elastic.
-    private static readonly ElasticLowLevelClient LowLevelClient;
+    private static readonly ElasticLowLevelClient? LowLevelClient;
 
     // Registers the configured environment name, and stamps each metrics with it.
     private static readonly string Environment;
@@ -16,26 +16,30 @@ public sealed class Metric
     private static readonly string Machine;
 
     // TODO: Add comment...
-    private static readonly string Prefix;
+    private static readonly string? Prefix;
 
     private static readonly bool Console;
 
     
     static Metric()
     {
-        var serverUri = AppSettings.GetString( "Metrics:ServerUri" );
-        var fingerprint = AppSettings.GetString( "Metrics:Fingerprint" );
-        var username = AppSettings.GetString( "Metrics:Username" );
-        var password = AppSettings.GetString( "Metrics:Password" );
-        Prefix = AppSettings.GetString( "Metrics:Prefix" );
-        Console = AppSettings.GetBool( "Metrics:Console" );
+        if (Config.Exists())
+        {
+            var serverUri = Config.GetString("Metrics:ServerUri");
+            var fingerprint = Config.GetString("Metrics:Fingerprint");
+            var username = Config.GetString("Metrics:Username");
+            var password = Config.GetString("Metrics:Password");
+            Prefix = Config.GetString("Metrics:Prefix");
+            Console = Config.GetBool("Metrics:Console");
 
-        var connectionConfiguration =
-            new ConnectionConfiguration( new Uri( serverUri ) )
-                .BasicAuthentication( username, password )
-                .CertificateFingerprint( fingerprint );   
-        
-        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
+            var connectionConfiguration =
+                new ConnectionConfiguration(new Uri(serverUri))
+                    .BasicAuthentication(username, password)
+                    .CertificateFingerprint(fingerprint);
+
+            LowLevelClient = new ElasticLowLevelClient(connectionConfiguration);
+        }
+
         Environment = System.Environment.GetEnvironmentVariable( "ASPNETCORE_ENVIRONMENT" ) ?? "local";
         Machine = System.Environment.MachineName;
     }
@@ -48,13 +52,12 @@ public sealed class Metric
         Name = name;
         _result = "OK";
         _scope = Id;
-        _event = Id;
     }
 
     
     #region string Id
 
-    private string Id { get; }
+    public string Id { get; }
 
     #endregion
 
@@ -129,6 +132,24 @@ public sealed class Metric
     public string? Result()
     {
         return _result;
+    }
+
+    #endregion
+
+    
+    #region string Reason
+
+    private string? _reason;
+
+    public Metric Reason( string? value )
+    {
+        _reason = value;
+        return this;
+    }
+
+    public string? Reason()
+    {
+        return _reason;
     }
 
     #endregion
@@ -219,6 +240,7 @@ public sealed class Metric
             Retry = _retry,
             Count = _count,
             Result = _result,
+            Reason = _reason,
             Initiator = _initiator,
             Scope = _scope,
             Event = _event,
@@ -228,16 +250,14 @@ public sealed class Metric
             User = System.Environment.UserName
         };
   
+        if( Console || LowLevelClient == null )
+            Logging.Console.Write( doc );
+            
+        if (LowLevelClient == null) return;
+        
         var response = LowLevelClient.Index< BytesResponse >( $"{Prefix}-{_start:yyyy-MM}", Id, PostData.Serializable( doc ) );
 
-        if( response.Success )
-        {
-            if( Console )
-                Logging.Console.Write( doc );
-            
-            return;
-        }
-        
-        Logging.Console.Write( $"Error: unable to write metric: {doc}" );
+        if( !response.Success )
+            Logging.Console.Write( $"Error: unable to write metric: {doc}" );
     }
 }

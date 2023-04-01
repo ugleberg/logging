@@ -13,20 +13,20 @@ public static class Console
         if( NoConsole ) return;
 
         var timestamp = DateTime.Now.ToString( TimestampFormat );
-        System.Console.WriteLine( $"{timestamp}{message}" );
+        System.Console.WriteLine( $"{ timestamp }{ message }" );
     }
 
 
-    public static void Write( object message )
+    public static void Write( object data )
     {
         if( NoConsole ) return;
 
         var timestamp = DateTime.Now.ToString( TimestampFormat );
-        System.Console.WriteLine( $"{timestamp}{message}" );
+        System.Console.WriteLine( $"{ timestamp }{ data }" );
     }
 
 
-    public static void Read( string message, out string value )
+    public static void ReadString( string message, out string value )
     {
         System.Console.Write( message );
         value = System.Console.ReadLine() ?? "";
@@ -65,7 +65,7 @@ public static class Console
     }
 
 
-    public static void Read( string message, out int value )
+    public static void ReadInt( string message, out int value )
     {
         System.Console.Write( message );
         var input = System.Console.ReadLine();
