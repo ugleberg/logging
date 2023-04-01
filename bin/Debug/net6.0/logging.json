@@ -1,0 +1,18 @@
+﻿{
+    "Metrics": {
+        "ServerUri": "http://localhost:9200",
+        "Fingerprint": "-",
+        "Username": "-",
+        "Password": "-",
+        "Prefix": "app-metrics",
+        "Console": true
+    },
+    "Logs": {
+        "ServerUri": "http://localhost:9200",
+        "Fingerprint": "-",
+        "Username": "-",
+        "Password": "-",
+        "Prefix": "app-logs",
+        "Console": true
+    }
+}
