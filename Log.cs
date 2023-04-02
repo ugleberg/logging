@@ -4,6 +4,7 @@
 namespace Logging;
 
 
+// Predefined log levels, Information is used as the default.
 public enum Level
 {
     Information,
@@ -13,47 +14,57 @@ public enum Level
 };
 
 
+// Defines a log object that can be written to the console and Elasticsearch.
 public class Log
 {
-    // Low-level client used to write to Elastic.
+    // Elasticsearch writer.
     private static readonly ElasticLowLevelClient? LowLevelClient;
-    
+
     // Registers the configured environment name, and stamps each metrics with it.
     private static readonly string Environment;
 
     // Registers the computer's machine name and stamps each metric with it.
     private static readonly string Machine;
-    
-    // TODO: Add comment...
+
+    // Holds the index prefix loaded from the config file.
     private static readonly string? Prefix;
 
+    // Indicates whether a console as available.
     private static readonly bool Console;
 
-    
+
+    // Initializes the logging mechanism.
     static Log()
     {
-        if (Config.Exists())
-        {
-            var serverUri = Config.GetString("Logs:ServerUri");
-            var fingerprint = Config.GetString("Logs:Fingerprint");
-            var username = Config.GetString("Logs:Username");
-            var password = Config.GetString("Logs:Password");
-            Prefix = Config.GetString("Logs:Prefix");
-            Console = Config.GetBool("Metrics:Console");
-
-            var connectionConfiguration =
-                new ConnectionConfiguration(new Uri(serverUri))
-                    .BasicAuthentication(username, password)
-                    .CertificateFingerprint(fingerprint);
-
-            LowLevelClient = new ElasticLowLevelClient(connectionConfiguration);
-        }
-
+        // Read the environment name from the system environment variable.
         Environment = System.Environment.GetEnvironmentVariable( "ASPNETCORE_ENVIRONMENT" ) ?? "local";
+        
+        // Read the machine name.
         Machine = System.Environment.MachineName;
+
+        // Skip the rest if there's no config file.
+        if ( !Config.Exists() ) return;
+
+        // Read the configuration from the config file.
+        var serverUri = Config.GetString( "Logs:ServerUri" );
+        var fingerprint = Config.GetString( "Logs:Fingerprint" );
+        var username = Config.GetString( "Logs:Username" );
+        var password = Config.GetString( "Logs:Password" );
+        Prefix = Config.GetString( "Logs:Prefix" );
+        Console = Config.GetBool( "Metrics:Console" );
+
+        // Configure the Elasticsearch writer.
+        var connectionConfiguration =
+            new ConnectionConfiguration( new Uri( serverUri ) )
+                .BasicAuthentication( username, password )
+                .CertificateFingerprint( fingerprint );
+
+        // Create the Elasticsearch writer.
+        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
     }
-    
-    
+
+
+    // Set message and default values of the log object.
     public Log( string message )
     {
         _time = DateTime.Now;
@@ -62,7 +73,8 @@ public class Log
         _level = Logging.Level.Information;
     }
 
-    
+
+    // Set exception as message and default values of the log object.
     public Log( Exception e )
     {
         _time = DateTime.Now;
@@ -71,28 +83,32 @@ public class Log
         _level = Logging.Level.Error;
     }
 
-    
+
+    // Automatically assigned unique object id.
     #region string Id
 
     private string Id { get; }
 
     #endregion
 
-    
+
+    // Message set in the constructor.
     #region string Message
 
     private string Message { get; }
 
     #endregion
 
- 
+
+    // Timestamp set in the constructor.
     #region DateTime Time
 
     private readonly DateTime _time;
 
     #endregion
-    
 
+
+    // Set the log level, defaults to Level.Information.
     #region LogLevel
 
     private Level _level;
@@ -109,8 +125,9 @@ public class Log
     }
 
     #endregion
-    
 
+
+    // Set the Scope, for example to the Id of the root metric surrounding the body of code doing the logging.
     #region Scope
 
     private string? _scope;
@@ -128,11 +145,12 @@ public class Log
 
     #endregion
 
-    
+
+    // Set a data object to include structured data into the log object.
     #region object Data
 
     private object? _data;
-    
+
     public Log Data( object value )
     {
         _data = value;
@@ -141,8 +159,11 @@ public class Log
 
     #endregion
 
+    
+    // Write the log object.
     public void Write()
     {
+        // Construct the serializable log object.
         var doc = new
         {
             Time = _time,
@@ -154,15 +175,19 @@ public class Log
             Machine,
             User = System.Environment.UserName
         };
-        
-        if( Console || LowLevelClient == null)
-            Logging.Console.Write(doc);
 
-        if (LowLevelClient == null) return;
-        
-        var response = LowLevelClient.Index<BytesResponse>($"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable(doc));
+        // Write the log on the console if ordered in the config file or if there's no config file at all.
+        if ( Console || LowLevelClient == null )
+            Logging.Console.Write( doc );
 
-        if (!response.Success)
-            Logging.Console.Write($"Error: unable to write log: {doc}");
+        // Skip the rest if not configured to write to Elasticsearch.
+        if ( LowLevelClient == null ) return;
+
+        // Write the log object to Elasticsearch.
+        var response = LowLevelClient.Index<BytesResponse>( $"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable( doc ) );
+
+        // Write an error message containing the log object to the console if writing to Elasticsearch failed.
+        if ( !response.Success )
+            Logging.Console.Write( $"Error: unable to write log: {doc}" );
     }
 }

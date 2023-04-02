@@ -4,9 +4,10 @@
 namespace Logging;
 
 
+// Defines a metric object that can be written to the console and Elasticsearch. 
 public sealed class Metric
 {
-    // Low-level client used to write to Elastic.
+    // Elasticsearch writer.
     private static readonly ElasticLowLevelClient? LowLevelClient;
 
     // Registers the configured environment name, and stamps each metrics with it.
@@ -15,36 +16,45 @@ public sealed class Metric
     // Registers the computer's machine name and stamps each metric with it.
     private static readonly string Machine;
 
-    // TODO: Add comment...
+    // Holds the index prefix loaded from the config file.
     private static readonly string? Prefix;
 
+    // Indicates whether a console as available.
     private static readonly bool Console;
 
-    
+
+    // Initializes the metrics mechanism.
     static Metric()
     {
-        if (Config.Exists())
-        {
-            var serverUri = Config.GetString("Metrics:ServerUri");
-            var fingerprint = Config.GetString("Metrics:Fingerprint");
-            var username = Config.GetString("Metrics:Username");
-            var password = Config.GetString("Metrics:Password");
-            Prefix = Config.GetString("Metrics:Prefix");
-            Console = Config.GetBool("Metrics:Console");
-
-            var connectionConfiguration =
-                new ConnectionConfiguration(new Uri(serverUri))
-                    .BasicAuthentication(username, password)
-                    .CertificateFingerprint(fingerprint);
-
-            LowLevelClient = new ElasticLowLevelClient(connectionConfiguration);
-        }
-
+        // Read the environment name from the system environment variable.
         Environment = System.Environment.GetEnvironmentVariable( "ASPNETCORE_ENVIRONMENT" ) ?? "local";
+        
+        // Read the machine name.
         Machine = System.Environment.MachineName;
+
+        // Skip the rest if there's no config file.
+        if ( !Config.Exists() ) return;
+
+        // Read the configuration from the config file.
+        var serverUri = Config.GetString( "Metrics:ServerUri" );
+        var fingerprint = Config.GetString( "Metrics:Fingerprint" );
+        var username = Config.GetString( "Metrics:Username" );
+        var password = Config.GetString( "Metrics:Password" );
+        Prefix = Config.GetString( "Metrics:Prefix" );
+        Console = Config.GetBool( "Metrics:Console" );
+
+        // Configure the Elasticsearch writer.
+        var connectionConfiguration =
+            new ConnectionConfiguration( new Uri( serverUri ) )
+                .BasicAuthentication( username, password )
+                .CertificateFingerprint( fingerprint );
+
+        // Create the Elasticsearch writer.
+        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
     }
-    
-    
+
+
+    // Set name and default values of the metric object.
     public Metric( string name )
     {
         _start = DateTime.Now;
@@ -54,28 +64,32 @@ public sealed class Metric
         _scope = Id;
     }
 
-    
+
+    // Automatically assigned unique id of the metric object.
     #region string Id
 
     public string Id { get; }
 
     #endregion
 
-    
+
+    // Metric's name.
     #region string Name
 
     private string Name { get; }
 
     #endregion
 
- 
+
+    // Holds the metric's start time.
     #region DateTime Start
 
     private readonly DateTime _start;
 
     #endregion
 
- 
+
+    // Get/set the retry value.
     #region Retry
 
     private int _retry;
@@ -94,6 +108,7 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Count value.
     #region Count
 
     private int _count;
@@ -112,13 +127,15 @@ public sealed class Metric
     #endregion
 
 
+    // Get the calculated elapsed time after the metric is written.
     #region string Elapsed
 
     public int Elapsed { get; private set; }
 
     #endregion
 
-    
+
+    // Get/set the Result value, defaults to "OK".
     #region string Result
 
     private string? _result;
@@ -136,7 +153,8 @@ public sealed class Metric
 
     #endregion
 
-    
+
+    // Get/set the Reason value, usually only when the Result isn't "OK".
     #region string Reason
 
     private string? _reason;
@@ -155,6 +173,7 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Scope value, defaults to the metric's Id.
     #region string Scope
 
     private string _scope;
@@ -173,6 +192,7 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Initiator value.
     #region Initiator
 
     private string? _initiator;
@@ -191,6 +211,7 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Event value.
     #region Event
 
     private string? _event;
@@ -209,6 +230,7 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Entity value.
     #region Entity
 
     private string? _entity;
@@ -227,10 +249,16 @@ public sealed class Metric
     #endregion
 
 
+    // Write the metric object.
     public void Write()
     {
+        // Register the stop time.
         var stop = DateTime.Now;
+        
+        // Calculate the elapsed time in milliseconds.
         Elapsed = ( stop - _start ).Milliseconds;
+        
+        // Construct the serializable metric object.
         var doc = new
         {
             Name,
@@ -249,15 +277,19 @@ public sealed class Metric
             Machine,
             User = System.Environment.UserName
         };
-  
-        if( Console || LowLevelClient == null )
-            Logging.Console.Write( doc );
-            
-        if (LowLevelClient == null) return;
-        
-        var response = LowLevelClient.Index< BytesResponse >( $"{Prefix}-{_start:yyyy-MM}", Id, PostData.Serializable( doc ) );
 
-        if( !response.Success )
+        // Write the metric on the console if ordered in the config file or if there's no config file at all.
+        if ( Console || LowLevelClient == null )
+            Logging.Console.Write( doc );
+
+        // Skip the rest if not configured to write to Elasticsearch.
+        if ( LowLevelClient == null ) return;
+
+        // Write the metric to Elasticsearch.
+        var response = LowLevelClient.Index<BytesResponse>( $"{Prefix}-{_start:yyyy-MM}", Id, PostData.Serializable( doc ) );
+
+        // Write an error message containing the metric object to the console if writing to Elasticsearch failed.
+        if ( !response.Success )
             Logging.Console.Write( $"Error: unable to write metric: {doc}" );
     }
 }

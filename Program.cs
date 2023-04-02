@@ -2,10 +2,13 @@
 using Console = Logging.Console;
 
 
+// Start measuring, use the metric's id to identify the job run.
 var metric = new Metric( "Main" ).Initiator( "Console" );
-Console.Write( $"Starting logging demo, execution id = {metric.Id}" );
+Console.Write( $"Starting logging demo, job run = {metric.Id}" );
 
-new Log( "Running logging demo" ).Scope( metric.Id ).Data( metric ).Write();
+// Log the job run.
+new Log( "Running logging demo" ).Scope( metric.Id ).Level( Level.Information ).Data( metric ).Write();
 
+// Stop measuring, and log the metric.
 metric.Write();
 Console.Write( $"Logging demo finished, elapsed {metric.Elapsed} msecs" );
