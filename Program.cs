@@ -9,6 +9,6 @@ Console.Write( $"Starting logging demo, job run = {metric.Id}" );
 // Log the job run.
 new Log( "Running logging demo" ).Scope( metric.Id ).Level( Level.Information ).Data( metric ).Write();
 
-// Stop measuring, and log the metric.
+// Stop measuring, and write the metric.
 metric.Write();
 Console.Write( $"Logging demo finished, elapsed {metric.Elapsed} msecs" );
