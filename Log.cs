@@ -1,4 +1,5 @@
-﻿using Elasticsearch.Net;
+﻿using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 
 
 namespace Logging;
@@ -18,7 +19,7 @@ public enum Level
 public class Log
 {
     // Elasticsearch writer.
-    private static readonly ElasticLowLevelClient? LowLevelClient;
+    private static readonly ElasticsearchClient? ElasticsearchClient;
 
     // Registers the configured environment name, and stamps each metrics with it.
     private static readonly string Environment;
@@ -54,13 +55,12 @@ public class Log
         Console = Config.GetBool( "Metrics:Console" );
 
         // Configure the Elasticsearch writer.
-        var connectionConfiguration =
-            new ConnectionConfiguration( new Uri( serverUri ) )
-                .BasicAuthentication( username, password )
-                .CertificateFingerprint( fingerprint );
+        var settings = new ElasticsearchClientSettings( new Uri( serverUri ) )
+            .CertificateFingerprint( fingerprint )
+            .Authentication( new BasicAuthentication( username, password ) );
 
         // Create the Elasticsearch writer.
-        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
+        ElasticsearchClient = new ElasticsearchClient( settings );
     }
 
 
@@ -166,10 +166,11 @@ public class Log
         // Construct the serializable log object.
         var doc = new
         {
+            Id,
             Time = _time,
             Message,
             Level = _level.ToString(),
-            Event = _scope,
+            Scope = _scope,
             Data = _data,
             Environment,
             Machine,
@@ -177,17 +178,17 @@ public class Log
         };
 
         // Write the log on the console if ordered in the config file or if there's no config file at all.
-        if ( Console || LowLevelClient == null )
+        if ( Console || ElasticsearchClient == null )
             Logging.Console.Write( doc );
 
         // Skip the rest if not configured to write to Elasticsearch.
-        if ( LowLevelClient == null ) return;
+        if ( ElasticsearchClient == null ) return;
 
         // Write the log object to Elasticsearch.
-        var response = LowLevelClient.Index<BytesResponse>( $"{Prefix}-{_time:yyyy-MM}", Id, PostData.Serializable( doc ) );
+        var response = ElasticsearchClient.Index( doc, $"{Prefix}-{_time:yyyy-MM}" );
 
         // Write an error message containing the log object to the console if writing to Elasticsearch failed.
-        if ( !response.Success )
+        if ( !response.IsSuccess() )
             Logging.Console.Write( $"Error: unable to write log: {doc}" );
     }
 }

@@ -1,4 +1,5 @@
-﻿using Elasticsearch.Net;
+﻿using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 
 
 namespace Logging;
@@ -8,7 +9,7 @@ namespace Logging;
 public sealed class Metric
 {
     // Elasticsearch writer.
-    private static readonly ElasticLowLevelClient? LowLevelClient;
+    private static readonly ElasticsearchClient? ElasticsearchClient;
 
     // Registers the configured environment name, and stamps each metrics with it.
     private static readonly string Environment;
@@ -44,13 +45,12 @@ public sealed class Metric
         Console = Config.GetBool( "Metrics:Console" );
 
         // Configure the Elasticsearch writer.
-        var connectionConfiguration =
-            new ConnectionConfiguration( new Uri( serverUri ) )
-                .BasicAuthentication( username, password )
-                .CertificateFingerprint( fingerprint );
+        var settings = new ElasticsearchClientSettings( new Uri( serverUri ) )
+            .CertificateFingerprint( fingerprint )
+            .Authentication( new BasicAuthentication( username, password ) );
 
         // Create the Elasticsearch writer.
-        LowLevelClient = new ElasticLowLevelClient( connectionConfiguration );
+        ElasticsearchClient = new ElasticsearchClient( settings );
     }
 
 
@@ -261,6 +261,7 @@ public sealed class Metric
         // Construct the serializable metric object.
         var doc = new
         {
+            Id,
             Name,
             Start = _start,
             Stop = stop,
@@ -279,17 +280,17 @@ public sealed class Metric
         };
 
         // Write the metric on the console if ordered in the config file or if there's no config file at all.
-        if ( Console || LowLevelClient == null )
+        if ( Console || ElasticsearchClient == null )
             Logging.Console.Write( doc );
 
         // Skip the rest if not configured to write to Elasticsearch.
-        if ( LowLevelClient == null ) return;
+        if ( ElasticsearchClient == null ) return;
 
         // Write the metric to Elasticsearch.
-        var response = LowLevelClient.Index<BytesResponse>( $"{Prefix}-{_start:yyyy-MM}", Id, PostData.Serializable( doc ) );
+        var response = ElasticsearchClient.Index( doc, $"{Prefix}-{_start:yyyy-MM}" );
 
         // Write an error message containing the metric object to the console if writing to Elasticsearch failed.
-        if ( !response.Success )
+        if ( !response.IsSuccess() )
             Logging.Console.Write( $"Error: unable to write metric: {doc}" );
     }
 }
