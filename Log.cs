@@ -127,6 +127,25 @@ public class Log
     #endregion
 
 
+    // Get/set the Emitter value.
+    #region Emitter
+
+    private string? _emitter;
+
+    public Log Emitter( string? value )
+    {
+        _emitter = value;
+        return this;
+    }
+
+    public string? Emitter()
+    {
+        return _emitter;
+    }
+
+    #endregion
+
+
     // Set the Scope, for example to the Id of the root metric surrounding the body of code doing the logging.
     #region Scope
 
@@ -170,6 +189,7 @@ public class Log
             Time = _time,
             Message,
             Level = _level.ToString(),
+            Emitter = _emitter,
             Scope = _scope,
             Data = _data,
             Environment,
