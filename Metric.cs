@@ -211,6 +211,25 @@ public sealed class Metric
     #endregion
 
 
+    // Get/set the Emitter value.
+    #region Emitter
+
+    private string? _emitter;
+
+    public Metric Emitter( string? value )
+    {
+        _emitter = value;
+        return this;
+    }
+
+    public string? Emitter()
+    {
+        return _emitter;
+    }
+
+    #endregion
+
+
     // Get/set the Event value.
     #region Event
 
@@ -250,7 +269,7 @@ public sealed class Metric
 
 
     // Write the metric object.
-    public void Write()
+    public  void Write()
     {
         // Register the stop time.
         var stop = DateTime.Now;
@@ -271,6 +290,7 @@ public sealed class Metric
             Result = _result,
             Reason = _reason,
             Initiator = _initiator,
+            Emitter = _emitter,
             Scope = _scope,
             Event = _event,
             Entity = _entity,
@@ -290,7 +310,7 @@ public sealed class Metric
         var response = ElasticsearchClient.Index( doc, $"{Prefix}-{_start:yyyy-MM}" );
 
         // Write an error message containing the metric object to the console if writing to Elasticsearch failed.
-        if ( !response.IsSuccess() )
+        if ( !response.IsValidResponse )
             Logging.Console.Write( $"Error: unable to write metric: {doc}" );
     }
 }

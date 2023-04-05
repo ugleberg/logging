@@ -3,7 +3,7 @@ using Console = Logging.Console;
 
 
 // Start measuring, use the metric's id to identify the job run.
-var metric = new Metric( "Main" ).Initiator( "Console" );
+var metric = new Metric( "Main" ).Emitter( "Console app" );
 Console.Write( $"Starting logging demo, job run = {metric.Id}" );
 
 // Log the job run.

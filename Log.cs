@@ -188,7 +188,7 @@ public class Log
         var response = ElasticsearchClient.Index( doc, $"{Prefix}-{_time:yyyy-MM}" );
 
         // Write an error message containing the log object to the console if writing to Elasticsearch failed.
-        if ( !response.IsSuccess() )
+        if ( !response.IsValidResponse )
             Logging.Console.Write( $"Error: unable to write log: {doc}" );
     }
 }
